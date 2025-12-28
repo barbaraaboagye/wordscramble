@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Word Scramble Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            /* SHARED THEME: Classic Game Show (Deep Blue & Gold) */
+            --primary: #FFD700;     /* Gold */
+            --secondary: #00a8ff;   /* Bright Blue */
+            --bg-dark: #001e4d;     /* Deep Royal Blue */
+            --panel-bg: #002a55;    /* Lighter Navy */
+            --text-main: #ffffff;
+            --success: #2ed573;
+            --danger: #ff4757;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: 'Segoe UI', sans-serif; }
+
+        /* Custom Scrollbar for Tabs */
+        ::-webkit-scrollbar { height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 4px; }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 50%, #003366 0%, #001e4d 100%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 30px;
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 3px solid var(--primary);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-family: 'Arial Black', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary);
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+            font-size: 1.4rem;
+        }
+
+        /* --- Team Scoreboard --- */
+        .scoreboard {
+            display: flex;
+            gap: 15px;
+        }
+
+        .team-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 100px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .team-box:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--primary);
+        }
+        
+        .team-name { font-size: 0.8rem; color: #88aadd; text-transform: uppercase; }
+        .team-score { color: var(--primary); font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: bold; }
+
+        /* --- Tabs Navigation --- */
+        .tabs-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 15px 20px;
+            background: rgba(0,0,0,0.2);
+            white-space: nowrap;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+
+        .tab-btn {
+            background: rgba(255,255,255,0.05);
+            color: #88aadd;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.3s;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #001e4d;
+            font-weight: 900;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        /* --- Game Area --- */
+        .game-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+            overflow-y: auto;
+        }
+
+        .level-indicator {
+            font-size: 1rem;
+            color: #88aadd;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .hint-display {
+            font-size: 1.6rem;
+            color: white;
+            margin-bottom: 30px;
+            text-align: center;
+            background: rgba(0,0,0,0.3);
+            padding: 15px 30px;
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.1);
+            max-width: 90%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .hint-label {
+            color: var(--secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* --- Answer Area (Top) --- */
+        .answer-zone {
+            width: 100%;
+            min-height: 100px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 3px dashed #4da6ff;
+            border-radius: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            transition: 0.3s;
+        }
+
+        .answer-zone.correct {
+            border-color: var(--success);
+            background: rgba(46, 213, 115, 0.1);
+            box-shadow: 0 0 30px rgba(46, 213, 115, 0.3);
+        }
+
+        .answer-zone.wrong {
+            border-color: var(--danger);
+            animation: shake 0.4s;
+        }
+
+        .placeholder-text {
+            color: rgba(255,255,255,0.2);
+            font-size: 1.5rem;
+            font-style: italic;
+            pointer-events: none;
+        }
+
+        /* --- Source Area (Bottom) --- */
+        .source-zone {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            min-height: 80px;
+        }
+
+        /* --- Letter Tiles --- */
+        .letter-tile {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(180deg, #ffd700, #e6c200);
+            color: #001e4d;
+            font-size: 2rem;
+            font-weight: 900;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 0px #b39700, 0 8px 10px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s, opacity 0.3s;
+            text-transform: uppercase;
+        }
+
+        .letter-tile:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #b39700, inset 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Different style when in answer zone */
+        .answer-zone .letter-tile {
+            background: linear-gradient(180deg, #fff, #ddd);
+            color: #001e4d;
+            box-shadow: 0 4px 0px #999, 0 5px 10px rgba(0,0,0,0.2);
+        }
+
+        .answer-zone .letter-tile:active {
+            box-shadow: 0 0 0 #999;
+        }
+
+        /* --- Controls --- */
+        .action-bar {
+            display: flex;
+            gap: 20px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 900;
+            text-transform: uppercase;
+            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-check {
+            background: linear-gradient(45deg, var(--secondary), #0077b3);
+            color: white;
+            border: 2px solid white;
+        }
+        .btn-check:hover { transform: scale(1.05); filter: brightness(1.1); }
+        .btn-check:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-clear {
+            background: rgba(255,255,255,0.1);
+            color: #ccc;
+            border: 2px solid #555;
+        }
+        .btn-clear:hover { background: rgba(255,255,255,0.2); color: white; }
+
+        /* --- Footer --- */
+        footer {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 2px solid var(--secondary);
+            flex-shrink: 0;
+        }
+
+        .brand-text {
+            color: white; 
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .brand-text * {
+            color: white !important;
+            font-weight: normal;
+        }
+
+        .footer-tools {
+            display: flex;
+            gap: 15px;
+        }
+
+        .footer-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #88aadd;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .footer-btn:hover {
+            border-color: var(--secondary);
+            color: white;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .live-badge {
+            background: #ff4757;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            animation: pulse-red 2s infinite;
+            display: none;
+        }
+
+        @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        /* --- Animations --- */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .tile-anim { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* --- Modal (General) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-card {
+            background: var(--panel-bg);
+            padding: 40px;
+            border: 4px solid var(--primary);
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        .final-score { font-size: 2.5rem; color: var(--primary); margin: 20px 0; }
+
+        /* Team Selector Grid */
+        .team-select-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .team-select-btn {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid white;
+            color: white;
+            padding: 20px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .team-select-btn:hover {
+            background: var(--primary);
+            color: black;
+            transform: scale(1.05);
+        }
+
+        /* Broadcast Modal */
+        .qr-placeholder {
+            width: 200px; height: 200px;
+            background: white;
+            margin: 20px auto;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .room-code {
+            font-size: 3rem;
+            color: var(--primary);
+            letter-spacing: 5px;
+            font-weight: 900;
+            margin: 20px 0;
+            font-family: monospace;
+        }
+
+        @media(max-width: 768px) {
+            .letter-tile { width: 45px; height: 45px; font-size: 1.5rem; }
+            .hint-display { font-size: 1.2rem; }
+            h1 { font-size: 1rem; }
+            .tabs-container { padding: 10px; }
+            .tab-btn { padding: 6px 15px; font-size: 0.8rem; }
+            footer { flex-direction: column; gap: 10px; text-align: center; padding: 20px; }
+            .scoreboard { gap: 5px; }
+            .team-box { min-width: 70px; padding: 5px; }
+            .team-name { font-size: 0.6rem; }
+            .team-score { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🔤 Word Scramble <span class="live-badge" id="liveBadge">LIVE</span></h1>
+    <div class="scoreboard" id="scoreboard">
+        <!-- Teams injected here -->
+    </div>
+</header>
+
+<!-- Tabs -->
+<div class="tabs-container" id="tabsZone">
+    <!-- Tabs injected by JS -->
+</div>
+
+<div class="game-container">
+    <div class="level-indicator" id="progress">Word 1 / 10</div>
+    
+    <div class="hint-display">
+        <span class="hint-label">HINT</span>
+        <span id="hintText">...</span>
+    </div>
+
+    <!-- Answer Drop Zone -->
+    <div class="answer-zone" id="targetZone">
+        <span class="placeholder-text">Click letters below...</span>
+    </div>
+
+    <!-- Source Word Pool -->
+    <div class="source-zone" id="sourceZone">
+        <!-- Letters injected here -->
+    </div>
+
+    <div class="action-bar" id="gameControls">
+        <button class="btn btn-clear" onclick="resetCurrentWord()">Reset</button>
+        <button class="btn btn-check" id="checkBtn" onclick="checkAnswer()">Check</button>
+    </div>
+    <div id="viewerMessage" style="display:none; color:#88aadd; font-style:italic;">Watching Host...</div>
+</div>
+
+<footer>
+    <div class="brand-text">JeParleEnglish 2025 | Made for learners with ❤️ | elessons14@gmail.com</div>
+    <div class="footer-tools">
+        <label for="fileInput" class="footer-btn" style="cursor: pointer;">
+            📂 Custom Words
+        </label>
+        <input type="file" id="fileInput" accept=".json,.txt" style="display:none" onchange="handleFileUpload(this)">
+        
+        <button class="footer-btn" onclick="openBroadcastModal()">📡 Broadcast</button>
+        <button class="footer-btn" onclick="openJoinModal()">📱 Join</button>
+    </div>
+</footer>
+
+<!-- Point Assignment Modal -->
+<div class="modal-overlay" id="pointModal">
+    <div class="modal-card">
+        <h2 style="color:var(--success); margin-bottom:10px;">CORRECT!</h2>
+        <p style="color:white; font-size: 1.2rem;">Who solved it?</p>
+        <div class="team-select-grid" id="pointButtons">
+            <!-- Buttons injected here -->
+        </div>
+        <button class="btn btn-clear" onclick="nextQuestion()">No Points / Skip</button>
+    </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal-overlay" id="renameModal">
+    <div class="modal-card">
+        <h2 style="color:white; margin-bottom:20px;">Rename Team</h2>
+        <input type="text" id="renameInput" style="padding: 10px; font-size: 1.2rem; width: 80%; margin-bottom: 20px; text-align: center;" placeholder="New Name">
+        <div style="display:flex; justify-content:center; gap:10px;">
+            <button class="btn btn-check" onclick="saveTeamName()">Save</button>
+            <button class="btn btn-clear" onclick="document.getElementById('renameModal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- End Game Modal -->
+<div class="modal-overlay" id="endModal">
+    <div class="modal-card">
+        <h2 style="color:var(--primary); margin-bottom:10px;">WINNER!</h2>
+        <div class="final-score" id="winnerText">Team 1</div>
+        <p style="color:#aaa;" id="finalScoresSub">Scores...</p>
+        <button class="btn btn-check" onclick="restartGame()">Replay Topic</button>
+    </div>
+</div>
+
+<!-- Broadcast Modal -->
+<div class="modal-overlay" id="broadcastModal">
+    <div class="modal-card">
+        <h2 style="color:white;">Session Started</h2>
+        <p style="color:#aaa; font-size: 0.9rem;">
+            To let students connect, this game must be hosted online (e.g. Netlify) with a valid Firebase Config.
+        </p>
+        <div class="room-code" id="hostRoomCode">----</div>
+        <div id="qrCodeContainer" style="margin:20px auto;"></div>
+        <button class="btn btn-check" onclick="document.getElementById('broadcastModal').style.display='none'">Start Game</button>
+    </div>
+</div>
+
+<!-- Join Modal -->
+<div class="modal-overlay" id="joinModal">
+    <div class="modal-card">
+        <h2 style="color:white;">Join Session</h2>
+        <input type="text" id="joinCodeInput" maxlength="4" style="padding: 15px; font-size: 2rem; width: 150px; text-align:center; letter-spacing: 5px; text-transform:uppercase; margin:20px 0;" placeholder="CODE">
+        <div style="display:flex; justify-content:center; gap:10px;">
+            <button class="btn btn-check" onclick="joinSession()">Join</button>
+            <button class="btn btn-clear" onclick="document.getElementById('joinModal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+    import { getFirestore, doc, setDoc, onSnapshot, updateDoc, collection } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+    // --- PASTE YOUR FIREBASE CONFIG HERE FOR GITHUB PAGES ---
+    // Updated with your provided configuration
+    const MANUAL_CONFIG = {
+        apiKey: "AIzaSyDvF5A-8g0ndYRlaxxEqJ6fkVVShR-edL8",
+        authDomain: "word-scramble-98476.firebaseapp.com",
+        projectId: "word-scramble-98476",
+        storageBucket: "word-scramble-98476.firebasestorage.app",
+        messagingSenderId: "764531893610",
+        appId: "1:764531893610:web:4ede9ac5fd3ff40d7db113",
+        measurementId: "G-VEGL84R28K"
+    };
+
+    // --- Audio ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    window.playSound = function(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'click') {
+            osc.frequency.setValueAtTime(600, now);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+        } else if (type === 'correct') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(500, now);
+            osc.frequency.linearRampToValueAtTime(1000, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'pop') {
+            osc.frequency.setValueAtTime(300, now);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+        }
+    }
+
+    // --- Firebase Init ---
+    let db, auth, user;
+    let currentSessionId = null;
+    let isHost = false;
+    let appId = 'word-scramble-v1';
+
+    async function initFirebase() {
+        let config = MANUAL_CONFIG;
+        
+        // Use injected config if available (Preview Mode)
+        if (typeof __firebase_config !== 'undefined') {
+            config = JSON.parse(__firebase_config);
+        }
+
+        if (!config) {
+            console.log("Firebase config missing. Online features disabled.");
+            return;
+        }
+
+        try {
+            const app = initializeApp(config);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            if (typeof __app_id !== 'undefined') appId = __app_id;
+            
+            // AUTH LOGIC
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch(e) {
+                console.error("Auth Error (Using Anonymous Fallback):", e);
+                if (!auth.currentUser) await signInAnonymously(auth);
+            }
+
+            onAuthStateChanged(auth, (u) => {
+                user = u;
+                if(u) console.log("Connected to Firebase");
+            });
+        } catch(e) {
+            console.error("Firebase Init Failed:", e);
+        }
+    }
+    initFirebase();
+
+    // --- State ---
+    let gameData = {
+        "Shopping": [
+            { word: "RECEIPT", hint: "Paper you get after buying something" },
+            { word: "WALLET", hint: "Small case to hold money" },
+            { word: "REFUND", hint: "Getting money back for returned items" },
+            { word: "CASHIER", hint: "Person who scans your items" },
+            { word: "CHEAP", hint: "Costs very little money" },
+            { word: "BASKET", hint: "You carry this to hold items" },
+            { word: "CREDIT", hint: "Pay with _____ card" },
+            { word: "COUPON", hint: "Paper that gives a discount" },
+            { word: "EXPENSIVE", hint: "Costs a lot of money" },
+            { word: "BARGAIN", hint: "Something bought at a good price" }
+        ],
+        "Cooking": [{ word: "RECIPE", hint: "Instructions" }, { word: "OVEN", hint: "Appliance" }],
+        "Animals": [{ word: "TIGER", hint: "Big Cat" }, { word: "EAGLE", hint: "Bird" }]
+    };
+
+    let gameState = {
+        teams: [
+            { name: "Team 1", score: 0 },
+            { name: "Team 2", score: 0 },
+            { name: "Team 3", score: 0 }
+        ],
+        currentCategory: "Shopping",
+        currentIdx: 0,
+        placedLetters: [],
+        scrambledOrder: [], // Indices of current word letters
+        timestamp: 0
+    };
+
+    let localCurrentLetters = []; // Objects {id, char, placed}
+    let editingTeamIdx = null;
+
+    // --- Core Game Functions ---
+
+    function initGame() {
+        if (!gameData[gameState.currentCategory]) {
+            gameState.currentCategory = Object.keys(gameData)[0];
+        }
+        renderScoreboard();
+        renderTabs();
+        loadLevel();
+    }
+
+    // Attach to window for HTML access
+    window.renderScoreboard = function() {
+        const board = document.getElementById('scoreboard');
+        board.innerHTML = '';
+        gameState.teams.forEach((team, idx) => {
+            const box = document.createElement('div');
+            box.className = 'team-box';
+            if (isHost || !currentSessionId) {
+                box.onclick = () => openRenameModal(idx);
+            }
+            box.innerHTML = `
+                <div class="team-name">${team.name} ${isHost || !currentSessionId ? '✎' : ''}</div>
+                <div class="team-score">${team.score}</div>
+            `;
+            board.appendChild(box);
+        });
+    }
+
+    window.openRenameModal = function(idx) {
+        editingTeamIdx = idx;
+        document.getElementById('renameInput').value = gameState.teams[idx].name;
+        document.getElementById('renameModal').style.display = 'flex';
+        document.getElementById('renameInput').focus();
+    }
+
+    window.saveTeamName = function() {
+        const newName = document.getElementById('renameInput').value.trim();
+        if(newName) {
+            gameState.teams[editingTeamIdx].name = newName;
+            updateSync();
+        }
+        document.getElementById('renameModal').style.display = 'none';
+        renderScoreboard();
+    }
+
+    function renderTabs() {
+        const zone = document.getElementById('tabsZone');
+        zone.innerHTML = '';
+        Object.keys(gameData).forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = `tab-btn ${cat === gameState.currentCategory ? 'active' : ''}`;
+            btn.textContent = cat;
+            if(isHost || !currentSessionId) {
+                btn.onclick = () => switchCategory(cat);
+            } else {
+                btn.style.opacity = "0.5"; // Disabled for viewers
+            }
+            zone.appendChild(btn);
+        });
+    }
+
+    function switchCategory(cat) {
+        if(cat === gameState.currentCategory) return;
+        gameState.currentCategory = cat;
+        gameState.currentIdx = 0;
+        gameState.placedLetters = [];
+        gameState.scrambledOrder = []; // Reset scramble
+        loadLevel();
+        updateSync();
+    }
+
+    function loadLevel() {
+        document.getElementById('endModal').style.display = 'none';
+        
+        const words = gameData[gameState.currentCategory];
+        
+        if (gameState.currentIdx >= words.length) {
+            // End Game Logic handled in render/sync usually
+            return;
+        }
+
+        const rawWord = words[gameState.currentIdx].word;
+        const letters = rawWord.split('');
+
+        // Init Local State if we are host or offline
+        // Or if we are viewer, we will get scrambledOrder from sync
+        
+        if (isHost || !currentSessionId) {
+            // Generate Scramble if new
+            if (gameState.scrambledOrder.length === 0) {
+                const indices = letters.map((_, i) => i);
+                gameState.scrambledOrder = indices.sort(() => Math.random() - 0.5);
+            }
+        }
+
+        // Build Local Objects
+        localCurrentLetters = letters.map((char, i) => ({
+            id: i,
+            char: char,
+            placed: gameState.placedLetters.some(pl => pl.id === i)
+        }));
+
+        // UI Updates
+        document.getElementById('progress').textContent = `${gameState.currentCategory}: Word ${gameState.currentIdx + 1} / ${words.length}`;
+        document.getElementById('hintText').textContent = words[gameState.currentIdx].hint;
+        document.getElementById('checkBtn').style.display = 'inline-block';
+        document.getElementById('targetZone').classList.remove('correct', 'wrong');
+
+        renderBoard();
+        renderTabs(); // Update active tab
+    }
+
+    function renderBoard() {
+        const sourceZone = document.getElementById('sourceZone');
+        const targetZone = document.getElementById('targetZone');
+
+        sourceZone.innerHTML = '';
+        targetZone.innerHTML = '';
+
+        // Render Placed (Target)
+        if (gameState.placedLetters.length === 0) {
+            targetZone.innerHTML = '<span class="placeholder-text">Click letters below...</span>';
+        } else {
+            gameState.placedLetters.forEach((letterObj, index) => {
+                const tile = createTile(letterObj);
+                if (isHost || !currentSessionId) {
+                    tile.onclick = () => unplaceLetter(index);
+                }
+                targetZone.appendChild(tile);
+            });
+        }
+
+        // Render Scrambled (Source)
+        // Use synchronized scramble order
+        gameState.scrambledOrder.forEach(origIndex => {
+            const letterObj = localCurrentLetters[origIndex];
+            // Only render if not placed
+            // Check if this ID is in placedLetters
+            const isPlaced = gameState.placedLetters.some(pl => pl.id === origIndex);
+            
+            if (!isPlaced) {
+                const tile = createTile(letterObj);
+                if (isHost || !currentSessionId) {
+                    tile.onclick = () => placeLetter(letterObj.id);
+                }
+                sourceZone.appendChild(tile);
+            }
+        });
+    }
+
+    function createTile(letterObj) {
+        const div = document.createElement('div');
+        div.className = 'letter-tile tile-anim';
+        div.textContent = letterObj.char;
+        return div;
+    }
+
+    // --- Interaction ---
+    window.placeLetter = function(id) {
+        window.playSound('pop');
+        const letter = localCurrentLetters.find(l => l.id === id);
+        if (letter) {
+            // Push simpler object to state
+            gameState.placedLetters.push({ id: letter.id, char: letter.char });
+            loadLevel(); // Re-render
+            updateSync();
+        }
+    }
+
+    window.unplaceLetter = function(index) {
+        window.playSound('click');
+        gameState.placedLetters.splice(index, 1);
+        loadLevel();
+        updateSync();
+    }
+
+    window.resetCurrentWord = function() {
+        gameState.placedLetters = [];
+        loadLevel();
+        updateSync();
+    }
+
+    // --- Logic ---
+    window.checkAnswer = function() {
+        const userWord = gameState.placedLetters.map(l => l.char).join('');
+        const correctWord = gameData[gameState.currentCategory][gameState.currentIdx].word;
+
+        if (userWord === correctWord) {
+            window.playSound('correct');
+            document.getElementById('targetZone').classList.add('correct');
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            
+            // Show Point Modal
+            document.getElementById('pointButtons').innerHTML = '';
+            gameState.teams.forEach((team, idx) => {
+                const btn = document.createElement('div');
+                btn.className = 'team-select-btn';
+                btn.textContent = team.name;
+                btn.onclick = () => assignPoints(idx);
+                document.getElementById('pointButtons').appendChild(btn);
+            });
+            document.getElementById('pointModal').style.display = 'flex';
+        } else {
+            window.playSound('wrong');
+            document.getElementById('targetZone').classList.add('wrong');
+            setTimeout(() => document.getElementById('targetZone').classList.remove('wrong'), 500);
+        }
+    }
+
+    window.assignPoints = function(teamIdx) {
+        gameState.teams[teamIdx].score += 100;
+        updateSync(); // Sync score
+        document.getElementById('pointModal').style.display = 'none';
+        window.nextQuestion();
+    }
+
+    window.nextQuestion = function() {
+        document.getElementById('pointModal').style.display = 'none';
+        gameState.currentIdx++;
+        gameState.placedLetters = [];
+        gameState.scrambledOrder = []; // Trigger new scramble
+        
+        // Check end game
+        const words = gameData[gameState.currentCategory];
+        if (gameState.currentIdx >= words.length) {
+            endGame();
+        } else {
+            loadLevel();
+        }
+        updateSync();
+    }
+
+    function endGame() {
+        document.getElementById('endModal').style.display = 'flex';
+        // Calculate Winner
+        let winner = gameState.teams.reduce((prev, current) => (prev.score > current.score) ? prev : current);
+        let isTie = gameState.teams.every(t => t.score === gameState.teams[0].score) && gameState.teams[0].score > 0;
+        
+        if (isTie) document.getElementById('winnerText').textContent = "It's a Tie!";
+        else document.getElementById('winnerText').textContent = `${winner.name} Wins!`;
+        
+        document.getElementById('finalScoresSub').innerHTML = gameState.teams.map(t => `${t.name}: ${t.score}`).join('<br>');
+        window.playSound('correct');
+    }
+
+    window.restartGame = function() {
+        gameState.currentIdx = 0;
+        gameState.placedLetters = [];
+        gameState.scrambledOrder = [];
+        loadLevel();
+        updateSync();
+    }
+
+    // --- Firebase Sync Logic ---
+
+    // Host Functions
+    window.openBroadcastModal = function() {
+        if (!user) { 
+            // Diagnostic Alert
+            alert("⚠️ CONNECTION ERROR: Firebase is not configured.\n\nSince you are running this on GitHub Pages (or locally), you must manually add a Firebase Configuration to the code.\n\n1. Open this file in a text editor.\n2. Find the line 'const MANUAL_CONFIG = null;'\n3. Paste your Firebase keys there.");
+            return; 
+        }
+        const code = Math.floor(1000 + Math.random() * 9000).toString();
+        document.getElementById('hostRoomCode').textContent = code;
+        
+        // Smart QR Logic
+        let gameUrl = window.location.href;
+        
+        // Check if URL is local/blob/file which phone can't reach
+        if (gameUrl.includes("file:") || gameUrl.includes("blob:") || gameUrl.includes("about:")) {
+            gameUrl = "https://your-github-username.github.io/your-repo-name"; // Placeholder hint
+        }
+
+        // Generate QR
+        const url = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gameUrl)}`;
+        document.getElementById('qrCodeContainer').innerHTML = `<img src="${url}" style="border:5px solid white; border-radius:10px;">`;
+        document.getElementById('broadcastModal').style.display = 'flex';
+        
+        createSession(code);
+    }
+
+    async function createSession(code) {
+        try {
+            currentSessionId = code;
+            isHost = true;
+            document.getElementById('liveBadge').style.display = 'inline-block';
+            
+            // Write initial state
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sessions', code), {
+                ...gameState,
+                updatedAt: Date.now()
+            });
+        } catch(e) {
+            console.error("Create Session Error:", e);
+            alert("Failed to start session. Permissions denied.");
+        }
+    }
+
+    async function updateSync() {
+        try {
+            if (isHost && currentSessionId) {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sessions', currentSessionId), {
+                    ...gameState,
+                    updatedAt: Date.now()
+                });
+            } else if (!isHost && !currentSessionId) {
+                renderScoreboard(); // Local only
+            }
+        } catch(e) {
+            console.error("Sync Error:", e);
+        }
+    }
+
+    // Join Functions
+    window.openJoinModal = function() {
+        document.getElementById('joinModal').style.display = 'flex';
+        document.getElementById('joinCodeInput').focus();
+    }
+
+    window.joinSession = function() {
+        const code = document.getElementById('joinCodeInput').value;
+        if (code.length !== 4) return;
+        
+        currentSessionId = code;
+        isHost = false;
+        
+        // UI Changes for Viewer: HIDE CONTROLS BUT SHOW BOARD
+        document.getElementById('joinModal').style.display = 'none';
+        document.getElementById('gameControls').style.display = 'none'; // Hide buttons only
+        document.getElementById('viewerMessage').style.display = 'block';
+        document.getElementById('liveBadge').style.display = 'inline-block';
+        document.querySelector('footer').style.display = 'none'; // Hide footer tools for viewer
+        
+        // Start Listener
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'sessions', code), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                gameState = { ...data };
+                // Rerender all
+                renderScoreboard();
+                loadLevel(); // This updates board positions and letters visually
+            }
+        }, (error) => {
+            console.error("Snapshot Error:", error);
+            alert("Connection lost or permission denied.");
+        });
+    }
+
+    // --- File Upload ---
+    window.handleFileUpload = function(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const content = e.target.result;
+            try {
+                if (file.name.endsWith('.json')) {
+                    const newData = JSON.parse(content);
+                    validateAndLoad(newData);
+                } else {
+                    const newData = parseTextData(content);
+                    validateAndLoad(newData);
+                }
+            } catch (err) { alert("Error: " + err.message); }
+            input.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    function parseTextData(text) {
+        const data = { "General": [] };
+        let currentCat = "General";
+        const lines = text.split(/\r?\n/);
+        lines.forEach(line => {
+            line = line.trim();
+            if (!line) return;
+            if (line.toLowerCase().startsWith('category:') || line.startsWith('#')) {
+                const parts = line.split(/[:#]/);
+                currentCat = parts[1] ? parts[1].trim() : "General";
+                if (!data[currentCat]) data[currentCat] = [];
+            } else {
+                let parts = line.split(/[|:,]/); 
+                const word = parts[0].trim().toUpperCase();
+                if (!word) return;
+                let hint = "Unscramble this word!"; 
+                if (parts.length >= 2) {
+                    const potentialHint = parts.slice(1).join(' ').trim();
+                    if (potentialHint) hint = potentialHint;
+                }
+                data[currentCat].push({ word, hint });
+            }
+        });
+        if (data["General"].length === 0 && Object.keys(data).length > 1) delete data["General"];
+        return data;
+    }
+
+    function validateAndLoad(newData) {
+         if (Object.keys(newData).length > 0) {
+            gameData = newData;
+            gameState.currentCategory = Object.keys(gameData)[0];
+            initGame();
+            alert("Custom words loaded!");
+        }
+    }
+
+    // Initial Start
+    initGame();
+
+</script>
+</body>
+</html>
