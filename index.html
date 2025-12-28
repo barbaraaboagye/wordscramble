@@ -518,7 +518,9 @@
 <div class="modal-overlay" id="broadcastModal">
     <div class="modal-card">
         <h2 style="color:white;">Session Started</h2>
-        <p style="color:#aaa;">Students can join using this code:</p>
+        <p style="color:#aaa; font-size: 0.9rem;">
+            To let students connect, this game must be hosted online (e.g. Netlify) with a valid Firebase Config.
+        </p>
         <div class="room-code" id="hostRoomCode">----</div>
         <div id="qrCodeContainer" style="margin:20px auto;"></div>
         <button class="btn btn-check" onclick="document.getElementById('broadcastModal').style.display='none'">Start Game</button>
@@ -541,6 +543,18 @@
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
     import { getFirestore, doc, setDoc, onSnapshot, updateDoc, collection } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+    // --- PASTE YOUR FIREBASE CONFIG HERE FOR GITHUB PAGES ---
+    // Updated with your specific configuration
+    const MANUAL_CONFIG = {
+        apiKey: "AIzaSyDvF5A-8g0ndYRlaxxEqJ6fkVVShR-edL8",
+        authDomain: "word-scramble-98476.firebaseapp.com",
+        projectId: "word-scramble-98476",
+        storageBucket: "word-scramble-98476.firebasestorage.app",
+        messagingSenderId: "764531893610",
+        appId: "1:764531893610:web:4ede9ac5fd3ff40d7db113",
+        measurementId: "G-VEGL84R28K"
+    };
 
     // --- Audio ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -587,39 +601,48 @@
     let db, auth, user;
     let currentSessionId = null;
     let isHost = false;
-    let appId = 'default-app';
+    let appId = 'word-scramble-v1';
 
-    if (typeof __firebase_config !== 'undefined') {
+    async function initFirebase() {
+        let config = MANUAL_CONFIG;
+        
+        // Use injected config if available (Preview Mode)
+        if (typeof __firebase_config !== 'undefined') {
+            config = JSON.parse(__firebase_config);
+        }
+
+        if (!config) {
+            console.log("Firebase config missing. Online features disabled.");
+            return;
+        }
+
         try {
-            const app = initializeApp(JSON.parse(__firebase_config));
+            const app = initializeApp(config);
             auth = getAuth(app);
             db = getFirestore(app);
             if (typeof __app_id !== 'undefined') appId = __app_id;
             
             // AUTH LOGIC
-            const initAuth = async () => {
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch(e) {
-                    console.error("Auth Error:", e);
-                    // Last resort
-                    if (!auth.currentUser) await signInAnonymously(auth);
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
                 }
-            };
-            initAuth();
+            } catch(e) {
+                console.error("Auth Error (Using Anonymous Fallback):", e);
+                if (!auth.currentUser) await signInAnonymously(auth);
+            }
 
             onAuthStateChanged(auth, (u) => {
                 user = u;
-                if(u) console.log("Connected as:", u.uid);
+                if(u) console.log("Connected to Firebase");
             });
         } catch(e) {
             console.error("Firebase Init Failed:", e);
         }
     }
+    initFirebase();
 
     // --- State ---
     let gameData = {
@@ -913,11 +936,24 @@
 
     // Host Functions
     window.openBroadcastModal = function() {
-        if (!user) { alert("Connecting... try again in 2s"); return; }
+        if (!user) { 
+            // Diagnostic Alert
+            alert("⚠️ CONNECTION ERROR: Firebase is not configured.\n\nSince you are running this on GitHub Pages (or locally), you must manually add a Firebase Configuration to the code.\n\n1. Open this file in a text editor.\n2. Find the line 'const MANUAL_CONFIG = null;'\n3. Paste your Firebase keys there.");
+            return; 
+        }
         const code = Math.floor(1000 + Math.random() * 9000).toString();
         document.getElementById('hostRoomCode').textContent = code;
+        
+        // Smart QR Logic
+        let gameUrl = window.location.href;
+        
+        // Check if URL is local/blob/file which phone can't reach
+        if (gameUrl.includes("file:") || gameUrl.includes("blob:") || gameUrl.includes("about:")) {
+            gameUrl = "https://your-github-username.github.io/your-repo-name"; // Placeholder hint
+        }
+
         // Generate QR
-        const url = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`;
+        const url = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gameUrl)}`;
         document.getElementById('qrCodeContainer').innerHTML = `<img src="${url}" style="border:5px solid white; border-radius:10px;">`;
         document.getElementById('broadcastModal').style.display = 'flex';
         
@@ -969,9 +1005,9 @@
         currentSessionId = code;
         isHost = false;
         
-        // UI Changes for Viewer
+        // UI Changes for Viewer: HIDE CONTROLS BUT SHOW BOARD
         document.getElementById('joinModal').style.display = 'none';
-        document.getElementById('gameControls').style.display = 'none'; // Hide buttons
+        document.getElementById('gameControls').style.display = 'none'; // Hide buttons only
         document.getElementById('viewerMessage').style.display = 'block';
         document.getElementById('liveBadge').style.display = 'inline-block';
         document.querySelector('footer').style.display = 'none'; // Hide footer tools for viewer
@@ -980,11 +1016,10 @@
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'sessions', code), (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                // Merge state
                 gameState = { ...data };
                 // Rerender all
                 renderScoreboard();
-                loadLevel(); // This updates board and tabs
+                loadLevel(); // This updates board positions and letters visually
             }
         }, (error) => {
             console.error("Snapshot Error:", error);
