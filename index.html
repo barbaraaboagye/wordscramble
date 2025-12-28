@@ -399,7 +399,7 @@
         }
 
         /* Broadcast Modal */
-        .qr-placeholder {
+        .qr-older {
             width: 200px; height: 200px;
             background: white;
             margin: 20px auto;
@@ -452,7 +452,7 @@
 
     <!-- Answer Drop Zone -->
     <div class="answer-zone" id="targetZone">
-        <span class="placeholder-text">Click letters below...</span>
+        <span class="older-text">Click letters below...</span>
     </div>
 
     <!-- Source Word Pool -->
@@ -496,7 +496,7 @@
 <div class="modal-overlay" id="renameModal">
     <div class="modal-card">
         <h2 style="color:white; margin-bottom:20px;">Rename Team</h2>
-        <input type="text" id="renameInput" style="padding: 10px; font-size: 1.2rem; width: 80%; margin-bottom: 20px; text-align: center;" placeholder="New Name">
+        <input type="text" id="renameInput" style="padding: 10px; font-size: 1.2rem; width: 80%; margin-bottom: 20px; text-align: center;" older="New Name">
         <div style="display:flex; justify-content:center; gap:10px;">
             <button class="btn btn-check" onclick="saveTeamName()">Save</button>
             <button class="btn btn-clear" onclick="document.getElementById('renameModal').style.display='none'">Cancel</button>
@@ -949,7 +949,7 @@
         
         // Check if URL is local/blob/file which phone can't reach
         if (gameUrl.includes("file:") || gameUrl.includes("blob:") || gameUrl.includes("about:")) {
-            gameUrl = "https://your-github-username.github.io/your-repo-name"; // Placeholder hint
+            gameUrl = "https://barbaraaboagye.github.io/wordscramble/"; // Placeholder hint
         }
 
         // Generate QR
